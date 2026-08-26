@@ -1,4 +1,3 @@
- 
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/spi/spi.h>
@@ -6,6 +5,8 @@
 #include <linux/fs.h>
 #include <linux/miscdevice.h>
 #include <linux/uaccess.h>
+#include <linux/poll.h>
+#include <linux/timer.h>
 
 static struct spi_device *bme280_spi;
 
@@ -23,6 +24,12 @@ struct bme280_calib_data{
 };
 
 static struct bme280_calib_data calib;
+
+static DECLARE_WAIT_QUEUE_HEAD(bme280_waitq);
+
+static int data_available = 0;
+
+static struct timer_list bme280_timer;
 
 static int bme280_read_reg(struct spi_device *spi, u8 reg, u8 *value){
 
@@ -190,6 +197,28 @@ static u32 bme280_compensate_hum(u16 raw_hum, s32 t_fine){
 	return (u32)(hum >> 12);
 }
 
+static void bme280_timer_callback(struct timer_list *t){
+	
+	data_available = 1;
+
+	wake_up_interruptible(&bme280_waitq);
+
+	mod_timer(&bme280_timer,
+		jiffies + msecs_to_jiffies(1000));
+}
+
+static __poll_t bme280_poll(struct file *file, poll_table *wait){
+	
+	__poll_t mask = 0;
+
+	poll_wait(file, &bme280_waitq, wait);
+
+	if(data_available)
+		mask |= POLLIN | POLLRDNORM;
+
+	return mask;
+}
+
 static ssize_t bme280_read(struct file *file, char __user *buf, size_t count, loff_t *ppos){
 
 	char kbuf[64];
@@ -217,15 +246,17 @@ static ssize_t bme280_read(struct file *file, char __user *buf, size_t count, lo
 			humidity / 1024,
 			((humidity % 1024) * 1000) / 1024);
 
-	if(*ppos > 0)
-		return 0;
+	/*if(*ppos > 0)
+		return 0;*/
 
 	bytes_to_copy = min_t(size_t, count, len);
 
 	if(copy_to_user(buf, kbuf, bytes_to_copy))
 		return -EFAULT;
 
-	*ppos += bytes_to_copy;
+	//*ppos += bytes_to_copy;
+
+	data_available = 0;
 
 	return bytes_to_copy;
 }
@@ -233,6 +264,7 @@ static ssize_t bme280_read(struct file *file, char __user *buf, size_t count, lo
 static const struct file_operations bme280_fops = {
 	.owner = THIS_MODULE,
 	.read = bme280_read,
+	.poll = bme280_poll,
 };
 
 static struct miscdevice bme280_misc_device = {
@@ -317,12 +349,22 @@ static int bme280_probe(struct spi_device *spi){
 		return ret;
 	}
 
+	timer_setup(&bme280_timer,
+			bme280_timer_callback,
+			0);
+
+	mod_timer(&bme280_timer,
+			jiffies + msecs_to_jiffies(1000));
+
 	return 0;
 }
 
 static void bme280_remove(struct spi_device *spi){
 
+	timer_delete_sync(&bme280_timer);
+
 	misc_deregister(&bme280_misc_device);
+
 	dev_info(&spi->dev, "BME280 driver removed\n");
 }
 
