@@ -13,6 +13,9 @@
 //#define UART_TX_PIN 0
 #define UART_RX_PIN 1
 #define SERVO_PIN 15
+#define GREEN_LED_PIN 16
+#define RED_LED_PIN 17
+#define BUZZER_PIN 18
 
 char command_buffer[32];
 int command_index = 0;
@@ -44,6 +47,19 @@ int main()
     servo_pwm_init();
     servo_set_pulse_us(1500);
 
+    gpio_init(GREEN_LED_PIN);
+    gpio_set_dir(GREEN_LED_PIN, GPIO_OUT);
+
+    gpio_init(RED_LED_PIN);
+    gpio_set_dir(RED_LED_PIN, GPIO_OUT);
+
+    gpio_init(BUZZER_PIN);
+    gpio_set_dir(BUZZER_PIN, GPIO_OUT);
+
+    gpio_put(GREEN_LED_PIN, 1);
+    gpio_put(RED_LED_PIN, 0);
+    gpio_put(BUZZER_PIN, 0);
+
     // Set up our UART
     uart_init(UART_ID, BAUD_RATE);
     // Set the TX and RX pins by using the function select on the GPIO
@@ -71,10 +87,18 @@ int main()
                 if(strcmp(command_buffer, "SERVO_ON") == 0){
                     printf("Command recognized: SERVO_ON\n");
                     servo_set_pulse_us(2000);
+
+                    gpio_put(GREEN_LED_PIN, 1);
+                    gpio_put(RED_LED_PIN, 0);
+                    gpio_put(BUZZER_PIN, 0);
                 }
                 else if(strcmp(command_buffer, "SERVO_OFF") == 0){
                     printf("Command recognized: SERVO_OFF\n");
                     servo_set_pulse_us(1000);
+                    
+                    gpio_put(GREEN_LED_PIN, 0);
+                    gpio_put(RED_LED_PIN, 1);
+                    gpio_put(BUZZER_PIN, 1);
                 }
                 else if(strcmp(command_buffer, "SERVO_IDLE") == 0){
                     printf("Command recognized: SERVO_IDLE\n");
