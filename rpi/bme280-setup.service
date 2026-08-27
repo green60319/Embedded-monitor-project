@@ -1,0 +1,11 @@
+[Unit]
+Description=BME280 Custom Driver Setup
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/pi/bme280_driver/setup_bme280.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
