@@ -3,10 +3,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <termios.h>
 
 int main()
 {
     int fd;
+    int uart_fd;
     int epfd;
     int n;
     char buf[128];
@@ -20,6 +22,44 @@ int main()
     {
         perror("open");
         return 1;
+    }
+
+    uart_fd = open("/dev/ttyAMA2", O_RDWR | O_NOCTTY);
+
+    if(uart_fd < 0)
+    {
+    	perror("UART open");
+    	close(fd);
+    	return 1;
+    }
+
+    struct termios tty;
+
+    if(tcgetattr(uart_fd, &tty) != 0)
+    {
+    	perror("tcgetattr");
+    	close(uart_fd);
+    	close(fd);
+    	return 1;
+    }
+
+    cfmakeraw(&tty);
+
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
+    tty.c_cflag &= ~PARENB;
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CSIZE;
+    tty.c_cflag |= CS8;
+    tty.c_cflag |= CLOCAL | CREAD;
+
+    if(tcsetattr(uart_fd, TCSANOW, &tty) != 0)
+    {
+    	perror("tcsetattr");
+    	close(uart_fd);
+    	close(fd);
+    	return 1;
     }
 
     epfd = epoll_create1(0);
@@ -62,14 +102,38 @@ int main()
 
             if(len > 0)
             {
+
+		float temperature;
+		float humidity;
+
                 buf[len] = '\0';
 
                 printf("Event received: %s", buf);
+
+		if(sscanf(buf,
+			"Temperature=%f C Humidity=%f %%",
+			&temperature,
+			&humidity) == 2)
+		{
+			if(temperature >= 25.0)
+			{
+				printf("State: ALARM\n");
+				write(uart_fd, "SERVO_OFF\n", 10);
+				printf("UART TX: SERVO_OFF\n");
+			}
+			else
+			{
+				printf("State: NORMAL\n");
+				write(uart_fd, "SERVO_ON\n", 9);
+				printf("UART TX: SERVO_ON\n");
+			}
+		}
             }
         }
     }
 
     close(fd);
+    close(uart_fd);
     close(epfd);
 
     return 0;
