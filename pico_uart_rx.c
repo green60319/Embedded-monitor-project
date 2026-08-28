@@ -15,7 +15,6 @@
 #define SERVO_PIN 15
 #define GREEN_LED_PIN 16
 #define RED_LED_PIN 17
-#define BUZZER_PIN 18
 
 char command_buffer[32];
 int command_index = 0;
@@ -53,12 +52,8 @@ int main()
     gpio_init(RED_LED_PIN);
     gpio_set_dir(RED_LED_PIN, GPIO_OUT);
 
-    gpio_init(BUZZER_PIN);
-    gpio_set_dir(BUZZER_PIN, GPIO_OUT);
-
     gpio_put(GREEN_LED_PIN, 1);
     gpio_put(RED_LED_PIN, 0);
-    gpio_put(BUZZER_PIN, 0);
 
     // Set up our UART
     uart_init(UART_ID, BAUD_RATE);
@@ -90,7 +85,6 @@ int main()
 
                     gpio_put(GREEN_LED_PIN, 1);
                     gpio_put(RED_LED_PIN, 0);
-                    gpio_put(BUZZER_PIN, 0);
                 }
                 else if(strcmp(command_buffer, "SERVO_OFF") == 0){
                     printf("Command recognized: SERVO_OFF\n");
@@ -98,7 +92,6 @@ int main()
                     
                     gpio_put(GREEN_LED_PIN, 0);
                     gpio_put(RED_LED_PIN, 1);
-                    gpio_put(BUZZER_PIN, 1);
                 }
                 else if(strcmp(command_buffer, "SERVO_IDLE") == 0){
                     printf("Command recognized: SERVO_IDLE\n");
