@@ -81,14 +81,14 @@ int main()
 
                 if(strcmp(command_buffer, "SERVO_ON") == 0){
                     printf("Command recognized: SERVO_ON\n");
-                    servo_set_pulse_us(2000);
+                    servo_set_pulse_us(1000);
 
                     gpio_put(GREEN_LED_PIN, 1);
                     gpio_put(RED_LED_PIN, 0);
                 }
                 else if(strcmp(command_buffer, "SERVO_OFF") == 0){
                     printf("Command recognized: SERVO_OFF\n");
-                    servo_set_pulse_us(1000);
+                    servo_set_pulse_us(2000);
                     
                     gpio_put(GREEN_LED_PIN, 0);
                     gpio_put(RED_LED_PIN, 1);
