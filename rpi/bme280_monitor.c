@@ -116,7 +116,7 @@ int main()
 			&temperature,
 			&humidity) == 2)
 		{
-			if(temperature >= 25.0)
+			if(temperature >= 33.0)
 			{
 				printf("System State: ALARM\n");
 				
